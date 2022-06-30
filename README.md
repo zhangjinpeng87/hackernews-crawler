@@ -1,8 +1,12 @@
 # Hackernews Crawler
 
-'''
-crawler <database-host> <database-port> <hackernews-hub = https://hacker-news.firebaseio.com/v0>
-''' 
+This is a hackernews crawler which grab the latest stories and comments, store them to a database you provided.
+
+Usage
+```
+crawler <database-host> <database-port> <hackernews-hub>
+```
+Default hackernews-hub is "https://hacker-news.firebaseio.com/v0"
 
 ```
 CREATE DATABASE hackernews;
@@ -28,11 +32,24 @@ CREATE TABLE `maxitem` (
   `maxid` int(10) DEFAULT NULL,
   PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */
 );
+```
+And then create user `newscrawler`:
+```
+CREATE USER newscrawler@'%' IDENTIFIED BY 'newscrawler';
+GRANT ALL PRIVILEGES ON hackernews.* TO newscrawler@'%';
+FLUSH PRIVILEGES;
+```
 
 Get the current maxitem from hackernews:
-> curl --request GET \
-  --url 'https://hacker-news.firebaseio.com/v0/maxitem.json?print=pretty' \
-  --data '{}'
-
+```
+curl --request GET \
+--url 'https://hacker-news.firebaseio.com/v0/maxitem.json?print=pretty' \
+--data '{}'
+```
+  
+And then insert the current maxitem id to table `maxitem`.
+```
 INSERT INTO maxitem (1, {current-maxitem-id})
 ```
+
+
