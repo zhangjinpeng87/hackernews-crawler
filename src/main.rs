@@ -2,6 +2,7 @@ pub mod crawler;
 pub mod store;
 use ctrlc;
 use std::sync::mpsc;
+use tokio::runtime;
 
 use clap::Parser;
 #[derive(Parser, Default, Debug)]
@@ -19,8 +20,13 @@ struct Args {
 
 fn main() {
     let (closer, rcv) = mpsc::channel();
-
     let args = Args::parse();
+
+    let rt = runtime::Builder::new_multi_thread()
+        .enable_all()
+        .worker_threads(2)
+        .build()
+        .unwrap();
 
     let mut crawler = crawler::Crawler::new(
         &args.hackernews_addr,
@@ -28,15 +34,13 @@ fn main() {
         "hackernews",
         args.dbport,
         rcv,
+        rt,
     );
-
-    let handle = std::thread::spawn(move || {
-        crawler.run();
-    });
 
     ctrlc::set_handler(move || {
         closer.send(0).unwrap();
     })
     .expect("Error setting Ctrl-C handler");
-    handle.join().expect("wait crawler failed");
+
+    crawler.run();
 }

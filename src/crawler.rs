@@ -1,10 +1,9 @@
 use crate::store::{Item, Store};
 use reqwest;
 use std::sync::mpsc;
-use std::sync::Arc;
 use std::sync::mpsc::Receiver;
+use std::sync::Arc;
 use std::time::Duration;
-use tokio;
 
 const EVENTS_BATCH_SIZE: u32 = 50;
 
@@ -32,7 +31,10 @@ impl NewsHub {
     }
 
     pub async fn fetch_item_async(&self, item_id: u32) -> Result<String, reqwest::Error> {
-        self.fetch_res_by_uri_async(&("/item/".to_owned() + &item_id.to_string() + ".json?print=pretty")).await
+        self.fetch_res_by_uri_async(
+            &("/item/".to_owned() + &item_id.to_string() + ".json?print=pretty"),
+        )
+        .await
     }
 
     fn fetch_res_by_uri(&self, query: &str) -> Result<String, reqwest::Error> {
@@ -40,7 +42,10 @@ impl NewsHub {
     }
 
     async fn fetch_res_by_uri_async(&self, query: &str) -> Result<String, reqwest::Error> {
-        reqwest::get(&(self.base_uri.clone() + query)).await?.text().await
+        reqwest::get(&(self.base_uri.clone() + query))
+            .await?
+            .text()
+            .await
     }
 }
 
@@ -48,22 +53,35 @@ pub struct Crawler {
     hub: Arc<NewsHub>,
     closer: Receiver<u32>,
     store: Store,
+    rt: tokio::runtime::Runtime,
 }
 
 impl Crawler {
-    pub fn new(base_uri: &str, host: &str, db: &str, port: u32, closer: Receiver<u32>) -> Self {
+    pub fn new(
+        base_uri: &str,
+        host: &str,
+        db: &str,
+        port: u32,
+        closer: Receiver<u32>,
+        rt: tokio::runtime::Runtime,
+    ) -> Self {
         let hub = Arc::new(NewsHub::new(base_uri));
         let store = Store::new(host, db, port);
-        Self { hub, closer, store }
+        Self {
+            hub,
+            closer,
+            store,
+            rt,
+        }
     }
 
     // Fetch items between (start, end] concurrently
     fn fetch_items_between(&self, start: u32, end: u32) -> Vec<Item> {
         let (s, r) = mpsc::channel();
-        for i in start+1..end+1 {
+        for i in start + 1..end + 1 {
             let sender = s.clone();
             let hub = self.hub.clone();
-            tokio::spawn(async move {
+            self.rt.spawn(async move {
                 match hub.fetch_item_async(i).await {
                     Ok(response) => {
                         if response.len() < 10 {
@@ -80,7 +98,7 @@ impl Crawler {
         }
 
         let mut res = vec![];
-        for _ in start+1..end+1 {
+        for _ in start + 1..end + 1 {
             if let Some(item) = r.recv().unwrap() {
                 res.push(item);
             }
@@ -89,23 +107,23 @@ impl Crawler {
         res
     }
 
-    pub fn grab_recent_events(&mut self) {
+    pub fn grab_recent_events(&mut self) -> bool {
         let new_max_id = match self.hub.fetch_maxitem() {
             Ok(resp) => resp.trim().parse::<u32>().unwrap(),
             Err(_) => {
-                return;
+                return false;
             }
         };
 
         let mut old_max_id = match self.store.current_maxitem() {
             Ok(id) => id,
             Err(_e) => {
-                return;
+                return false;
             }
         };
 
         if old_max_id >= new_max_id {
-            return;
+            return false;
         }
 
         while old_max_id < new_max_id {
@@ -121,7 +139,14 @@ impl Crawler {
                 }
             }
             old_max_id = next_id;
+
+            // recv close msg
+            if self.closer.try_recv().is_ok() {
+                return true;
+            }
         }
+
+        false
     }
 
     pub fn run(&mut self) {
@@ -133,7 +158,10 @@ impl Crawler {
                 _ => {}
             }
 
-            self.grab_recent_events();
+            let close = self.grab_recent_events();
+            if close {
+                return;
+            }
         }
     }
 }
