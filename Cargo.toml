@@ -2,13 +2,12 @@
 name = "hackernews-crawler"
 version = "0.1.0"
 edition = "2021"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-reqwest = { version = "0.11", features = ["blocking", "json"] }
-mysql = "*"
-serde_json = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-ctrlc = { version = "3.0", features = ["termination"] }
 clap = { version = "3.2.7", features = ["derive"] }
+ctrlc = { version = "3.0", features = ["termination"] }
+mysql = "*"
+reqwest = { version = "0.11", features = ["blocking", "json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

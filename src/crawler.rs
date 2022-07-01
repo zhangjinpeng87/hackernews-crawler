@@ -47,7 +47,7 @@ impl NewsHub {
                         res.push(item);
                     }
                 }
-                Err(e) => {}
+                Err(_e) => {}
             }
         }
         res
@@ -77,7 +77,7 @@ impl Crawler {
 
         let old_max_id = match self.store.current_maxitem() {
             Ok(id) => id,
-            Err(e) => {
+            Err(_e) => {
                 return;
             }
         };

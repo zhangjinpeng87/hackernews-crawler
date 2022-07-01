@@ -1,28 +1,18 @@
 use mysql::prelude::Queryable;
 use mysql::*;
-use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
 pub struct Store {
-    url: String,
     pool: Pool,
-    last_reconnect: Instant,
 }
 
 impl Store {
     pub fn new(host: &str, db: &str, port: u32) -> Self {
-        println!("start to connect time {:?}", Instant::now());
         let url = format!("mysql://newscrawler:newscrawler@{}:{}/{}", host, port, db);
         let pool = Pool::new(Opts::from_url(&url).unwrap()).expect("connect to db failed");
 
-        println!("connect time {:?}", Instant::now());
-
-        Self {
-            url,
-            pool,
-            last_reconnect: Instant::now(),
-        }
+        Self { pool }
     }
 
     pub fn current_maxitem(&mut self) -> Result<u32> {
@@ -40,11 +30,11 @@ impl Store {
         conn.exec_drop("update maxitem set maxid = ? where id = 1", (maxitem_id,))
     }
 
-    pub fn update_topstories(&mut self, items_id: Vec<u32>) -> Result<()> {
-        // let mut conn = self.pool.get_conn().unwrap();
-        // conn.exec_batch(stmt: S, params: I)
-        Ok(())
-    }
+    // pub fn update_topstories(&mut self, items_id: Vec<u32>) -> Result<()> {
+    //     // let mut conn = self.pool.get_conn().unwrap();
+    //     // conn.exec_batch(stmt: S, params: I)
+    //     Ok(())
+    // }
 
     pub fn insert_new_items(&mut self, items: Vec<Item>) -> Result<()> {
         if items.is_empty() {
