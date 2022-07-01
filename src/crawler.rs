@@ -32,25 +32,10 @@ impl NewsHub {
         reqwest::blocking::get(&(self.base_uri.clone() + query))?.text()
     }
 
-    // Fetch items between (start, end]
-    pub fn fetch_items_between(&self, start: u32, end: u32) -> Vec<Item> {
-        let mut res = vec![];
-        for i in start..end + 1 {
-            match self.fetch_item(i) {
-                Ok(response) => {
-                    println!("resp: {}", response);
-                    if response.len() < 10 {
-                        println!("invalid response");
-                    } else {
-                        let item = Item::from(response);
-                        res.push(item);
-                    }
-                }
-                Err(_e) => {}
-            }
-        }
-        res
-    }
+    // Todo: add 
+    // async fn fetch_res_by_uri_async(&self, query: &str) -> Result<String, reqwest::Error> {
+    //     reqwest::get(&(self.base_uri.clone() + query)).await?.text().await
+    // }
 }
 
 pub struct Crawler {
@@ -64,6 +49,26 @@ impl Crawler {
         let hub = NewsHub::new(base_uri);
         let store = Store::new(host, db, port);
         Self { hub, closer, store }
+    }
+
+    // Fetch items between (start, end]
+    // Todo: use async & concurrency to increase the catch up history events.
+    fn fetch_items_between(&self, start: u32, end: u32) -> Vec<Item> {
+        let mut res = vec![];
+        for i in start..end + 1 {
+            match self.hub.fetch_item(i) {
+                Ok(response) => {
+                    if response.len() < 10 {
+                        println!("invalid response");
+                    } else {
+                        let item = Item::from(response);
+                        res.push(item);
+                    }
+                }
+                Err(_e) => {}
+            }
+        }
+        res
     }
 
     pub fn grab_recent_events(&mut self) {
@@ -88,7 +93,7 @@ impl Crawler {
         while old_max_id < new_max_id {
             let next_id = std::cmp::min(old_max_id + EVENTS_BATCH_SIZE, new_max_id);
 
-            let items = self.hub.fetch_items_between(old_max_id + 1, next_id);
+            let items = self.fetch_items_between(old_max_id + 1, next_id);
             match self.store.insert_new_items(items) {
                 Ok(()) => {
                     let _ = self.store.update_maxitem(next_id);
