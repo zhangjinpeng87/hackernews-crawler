@@ -10,11 +10,11 @@ crawler <database-host> <database-port> <hackernews-hub>
 ```
 crawler tidb-cloud-connection-addr 4000 https://hacker-news.firebaseio.com/v0
 ```
-For me I use TiDB Cloud dev-tier as the database to store the data and enjoy very happily with this powerful real-time HTAP database.
+For me, I use TiDB Cloud dev-tier as database to store data and am very happy to use this powerful real-time HTAP database.
 
 ![aee3c3b4-228b-456f-9e9d-519af640fd46](https://user-images.githubusercontent.com/19700528/176884255-8118191e-c395-4fee-97f6-3559f70d48ec.jpeg)
 
-I just wrote some SQL Queries, and didn't add any additional index for `items` table.
+I just wrote some SQL without adding any extra indexes to the `items` table, very fast and flexible.
 
 Latest 500 new stories:
 ```
