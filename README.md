@@ -14,7 +14,7 @@ For me I use TiDB Cloud dev-tier as the database to store the data and enjoy ver
 
 ![aee3c3b4-228b-456f-9e9d-519af640fd46](https://user-images.githubusercontent.com/19700528/176884255-8118191e-c395-4fee-97f6-3559f70d48ec.jpeg)
 
-In the above example I just wrote some SQL Queries, and didn't add additional indices for `items` table.
+I just wrote some SQL Queries, and didn't add any additional index for `items` table.
 
 Latest 500 new stories:
 ```
@@ -40,6 +40,8 @@ Number of new stories distributed by hour:
 ```
 select hour(from_unixtime(time)) as date, count(*) as number_of_stories from items where type='story' group by date order by date desc;
 ```
+
+## Preparations
 
 Before you run the crawler you need make sure get the database ready by running steps below:
 
