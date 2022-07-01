@@ -1,10 +1,9 @@
+use crate::store::{Item, Store};
 use reqwest;
-
 use std::sync::mpsc::Receiver;
-
 use std::time::Duration;
 
-use crate::store::{Item, Store};
+const EVENTS_BATCH_SIZE: u32 = 50;
 
 pub struct NewsHub {
     base_uri: String,
@@ -75,7 +74,7 @@ impl Crawler {
             }
         };
 
-        let old_max_id = match self.store.current_maxitem() {
+        let mut old_max_id = match self.store.current_maxitem() {
             Ok(id) => id,
             Err(_e) => {
                 return;
@@ -86,15 +85,19 @@ impl Crawler {
             return;
         }
 
-        let items = self.hub.fetch_items_between(old_max_id + 1, new_max_id);
+        while old_max_id < new_max_id {
+            let next_id = std::cmp::min(old_max_id + EVENTS_BATCH_SIZE, new_max_id);
 
-        match self.store.insert_new_items(items) {
-            Ok(()) => {
-                let _ = self.store.update_maxitem(new_max_id);
+            let items = self.hub.fetch_items_between(old_max_id + 1, next_id);
+            match self.store.insert_new_items(items) {
+                Ok(()) => {
+                    let _ = self.store.update_maxitem(next_id);
+                }
+                Err(e) => {
+                    println!("insert new items error: {:?}", e);
+                }
             }
-            Err(e) => {
-                println!("insert new items error: {:?}", e);
-            }
+            old_max_id = next_id;
         }
     }
 
