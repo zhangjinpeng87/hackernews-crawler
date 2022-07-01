@@ -1,7 +1,10 @@
 use crate::store::{Item, Store};
 use reqwest;
+use std::sync::mpsc;
+use std::sync::Arc;
 use std::sync::mpsc::Receiver;
 use std::time::Duration;
+use tokio;
 
 const EVENTS_BATCH_SIZE: u32 = 50;
 
@@ -28,46 +31,61 @@ impl NewsHub {
         self.fetch_res_by_uri(&("/item/".to_owned() + &item_id.to_string() + ".json?print=pretty"))
     }
 
+    pub async fn fetch_item_async(&self, item_id: u32) -> Result<String, reqwest::Error> {
+        self.fetch_res_by_uri_async(&("/item/".to_owned() + &item_id.to_string() + ".json?print=pretty")).await
+    }
+
     fn fetch_res_by_uri(&self, query: &str) -> Result<String, reqwest::Error> {
         reqwest::blocking::get(&(self.base_uri.clone() + query))?.text()
     }
 
-    // Todo: add 
-    // async fn fetch_res_by_uri_async(&self, query: &str) -> Result<String, reqwest::Error> {
-    //     reqwest::get(&(self.base_uri.clone() + query)).await?.text().await
-    // }
+    async fn fetch_res_by_uri_async(&self, query: &str) -> Result<String, reqwest::Error> {
+        reqwest::get(&(self.base_uri.clone() + query)).await?.text().await
+    }
 }
 
 pub struct Crawler {
-    hub: NewsHub,
+    hub: Arc<NewsHub>,
     closer: Receiver<u32>,
     store: Store,
 }
 
 impl Crawler {
     pub fn new(base_uri: &str, host: &str, db: &str, port: u32, closer: Receiver<u32>) -> Self {
-        let hub = NewsHub::new(base_uri);
+        let hub = Arc::new(NewsHub::new(base_uri));
         let store = Store::new(host, db, port);
         Self { hub, closer, store }
     }
 
-    // Fetch items between (start, end]
-    // Todo: use async & concurrency to increase the catch up history events.
+    // Fetch items between (start, end] concurrently
     fn fetch_items_between(&self, start: u32, end: u32) -> Vec<Item> {
-        let mut res = vec![];
-        for i in start..end + 1 {
-            match self.hub.fetch_item(i) {
-                Ok(response) => {
-                    if response.len() < 10 {
-                        println!("invalid response");
-                    } else {
-                        let item = Item::from(response);
-                        res.push(item);
+        let (s, r) = mpsc::channel();
+        for i in start+1..end+1 {
+            let sender = s.clone();
+            let hub = self.hub.clone();
+            tokio::spawn(async move {
+                match hub.fetch_item_async(i).await {
+                    Ok(response) => {
+                        if response.len() < 10 {
+                            println!("invalid response");
+                            sender.send(None).unwrap();
+                        } else {
+                            let item = Item::from(response);
+                            sender.send(Some(item)).unwrap();
+                        }
                     }
+                    Err(_) => sender.send(None).unwrap(),
                 }
-                Err(_e) => {}
+            });
+        }
+
+        let mut res = vec![];
+        for _ in start+1..end+1 {
+            if let Some(item) = r.recv().unwrap() {
+                res.push(item);
             }
         }
+
         res
     }
 
