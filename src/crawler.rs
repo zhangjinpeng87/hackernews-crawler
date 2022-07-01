@@ -75,10 +75,10 @@ impl Crawler {
         }
     }
 
-    // Fetch items between (start, end] concurrently
+    // Fetch items between [start, end] concurrently
     fn fetch_items_between(&self, start: u32, end: u32) -> Vec<Item> {
         let (s, r) = mpsc::channel();
-        for i in start + 1..end + 1 {
+        for i in start..end + 1 {
             let sender = s.clone();
             let hub = self.hub.clone();
             self.rt.spawn(async move {
@@ -86,21 +86,29 @@ impl Crawler {
                     Ok(response) => {
                         if response.len() < 10 {
                             println!("invalid response");
-                            sender.send(None).unwrap();
+                            let _ = sender.send(None);
                         } else {
                             let item = Item::from(response);
-                            sender.send(Some(item)).unwrap();
+                            let _ = sender.send(Some(item));
                         }
                     }
-                    Err(_) => sender.send(None).unwrap(),
+                    Err(_) => { let _ = sender.send(None).unwrap(); }
                 }
             });
         }
 
         let mut res = vec![];
-        for _ in start + 1..end + 1 {
-            if let Some(item) = r.recv().unwrap() {
-                res.push(item);
+        for _ in start..end + 1 {
+            match r.recv_timeout(std::time::Duration::from_secs(60)) {
+                Ok(item) => {
+                    if let Some(item) = item {
+                        res.push(item);
+                    }
+                }
+                Err(_) => {
+                    println!("Don't wait since we have waited for 60 seconds");
+                    break;
+                }
             }
         }
 
