@@ -1,12 +1,15 @@
 # Hackernews Crawler
 
-This is a hackernews crawler which grab the latest stories and comments, store them to a database you provided.
+This is a hackernews crawler which grab the latest stories and comments, store them to a MySQL compatibale database like MySQL or TiDB Cloud.
 
-Usage
+## Usage
 ```
 crawler <database-host> <database-port> <hackernews-hub>
 ```
-Default hackernews-hub is "https://hacker-news.firebaseio.com/v0"
+```
+crawler tidb-cloud-connection-addr 4000 https://hacker-news.firebaseio.com/v0
+```
+Before you run the crawler you need make sure get the database ready by running steps below:
 
 ```
 CREATE DATABASE hackernews;
@@ -51,5 +54,7 @@ And then insert the current maxitem id to table `maxitem`.
 ```
 INSERT INTO maxitem values (1, {current-maxitem-id})
 ```
+If you want to grab events start from a past time like 30 days' before, you can insert a relatively smaller item id in table `maxitem`.
 
+Now you can run the crawler to grab hackernews news/stories/comments to your database.
 
