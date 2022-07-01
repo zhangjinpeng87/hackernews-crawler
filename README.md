@@ -49,7 +49,7 @@ curl --request GET \
   
 And then insert the current maxitem id to table `maxitem`.
 ```
-INSERT INTO maxitem (1, {current-maxitem-id})
+INSERT INTO maxitem values (1, {current-maxitem-id})
 ```
 
 
