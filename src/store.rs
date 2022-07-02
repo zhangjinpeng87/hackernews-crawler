@@ -8,8 +8,8 @@ pub struct Store {
 }
 
 impl Store {
-    pub fn new(host: &str, db: &str, port: u32) -> Self {
-        let url = format!("mysql://newscrawler:newscrawler@{}:{}/{}", host, port, db);
+    pub fn new(host: &str, db: &str, port: u32, usr: &str, pwd: &str) -> Self {
+        let url = format!("mysql://{}:{}@{}:{}/{}", usr, pwd, host, port, db);
         let pool = Pool::new(Opts::from_url(&url).unwrap()).expect("connect to db failed");
 
         Self { pool }

@@ -5,7 +5,7 @@ This is a hackernews crawler which grab the latest stories and comments, store t
 
 ## Usage
 ```
-crawler <database-host> <database-port> <hackernews-hub>
+crawler <db-host> <db-port> <db-name> <db-user> <db-pwd> <hackernews-hub>
 ```
 ```
 crawler tidb-cloud-connection-addr 4000 https://hacker-news.firebaseio.com/v0
@@ -69,12 +69,6 @@ CREATE TABLE `maxitem` (
   `maxid` int(10) DEFAULT NULL,
   PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */
 );
-```
-And then create user `newscrawler`:
-```
-CREATE USER newscrawler@'%' IDENTIFIED BY 'newscrawler';
-GRANT ALL PRIVILEGES ON hackernews.* TO newscrawler@'%';
-FLUSH PRIVILEGES;
 ```
 
 Get the current maxitem from hackernews:

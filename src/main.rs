@@ -14,6 +14,9 @@ use clap::Parser;
 struct Args {
     dbhost: String,
     dbport: u32,
+    db: String,
+    usr: String,
+    pwd: String,
     // #[default = "https://hacker-news.firebaseio.com/v0"]
     hackernews_addr: String,
 }
@@ -31,8 +34,10 @@ fn main() {
     let mut crawler = crawler::Crawler::new(
         &args.hackernews_addr,
         &args.dbhost,
-        "hackernews",
+        &args.db,
         args.dbport,
+        &args.usr,
+        &args.pwd,
         rcv,
         rt,
     );

@@ -62,11 +62,13 @@ impl Crawler {
         host: &str,
         db: &str,
         port: u32,
+        usr: &str,
+        pwd: &str,
         closer: Receiver<u32>,
         rt: tokio::runtime::Runtime,
     ) -> Self {
         let hub = Arc::new(NewsHub::new(base_uri));
-        let store = Store::new(host, db, port);
+        let store = Store::new(host, db, port, usr, pwd);
         Self {
             hub,
             closer,
