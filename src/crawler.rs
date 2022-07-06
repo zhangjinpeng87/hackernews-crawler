@@ -102,7 +102,7 @@ impl Crawler {
                         }
                     }
                     Err(_) => {
-                        let _ = sender.send(None).unwrap();
+                        let _ = sender.send(None);
                     }
                 }
             });
