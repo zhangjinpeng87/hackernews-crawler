@@ -1,5 +1,6 @@
 use crate::store::{Item, Store};
 use reqwest;
+use serde::{Deserialize, Serialize};
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
@@ -37,6 +38,10 @@ impl NewsHub {
         .await
     }
 
+    pub fn fetch_updates(&self) -> Result<String, reqwest::Error> {
+        self.fetch_res_by_uri("/updates.json?print=pretty")
+    }
+
     fn fetch_res_by_uri(&self, query: &str) -> Result<String, reqwest::Error> {
         reqwest::blocking::get(&(self.base_uri.clone() + query))?.text()
     }
@@ -54,6 +59,7 @@ pub struct Crawler {
     closer: Receiver<u32>,
     store: Store,
     rt: tokio::runtime::Runtime,
+    last_updates: Vec<u32>,
 }
 
 impl Crawler {
@@ -74,13 +80,14 @@ impl Crawler {
             closer,
             store,
             rt,
+            last_updates: vec![],
         }
     }
 
-    // Fetch items between [start, end] concurrently
-    fn fetch_items_between(&self, start: u32, end: u32) -> Vec<Item> {
+    fn fetch_items(&self, ids: Vec<u32>) -> Vec<Item> {
         let (s, r) = mpsc::channel();
-        for i in start..end + 1 {
+        let ids_cnt = ids.len();
+        for i in ids {
             let sender = s.clone();
             let hub = self.hub.clone();
             self.rt.spawn(async move {
@@ -94,13 +101,15 @@ impl Crawler {
                             let _ = sender.send(Some(item));
                         }
                     }
-                    Err(_) => { let _ = sender.send(None).unwrap(); }
+                    Err(_) => {
+                        let _ = sender.send(None).unwrap();
+                    }
                 }
             });
         }
 
         let mut res = vec![];
-        for _ in start..end + 1 {
+        for _ in 0..ids_cnt {
             match r.recv_timeout(std::time::Duration::from_secs(60)) {
                 Ok(item) => {
                     if let Some(item) = item {
@@ -139,7 +148,7 @@ impl Crawler {
         while old_max_id < new_max_id {
             let next_id = std::cmp::min(old_max_id + EVENTS_BATCH_SIZE, new_max_id);
 
-            let items = self.fetch_items_between(old_max_id + 1, next_id);
+            let items = self.fetch_items((old_max_id + 1..next_id + 1).collect());
             match self.store.insert_new_items(items) {
                 Ok(()) => {
                     let _ = self.store.update_maxitem(next_id);
@@ -159,6 +168,38 @@ impl Crawler {
         false
     }
 
+    fn grab_rencent_updates(&mut self) {
+        use serde_json::Result;
+        let mut updated_items = match self.hub.fetch_updates() {
+            Ok(resp) => {
+                let updates: Result<Updates> = serde_json::from_str(&resp);
+                match updates {
+                    Ok(updates) => updates.items,
+                    Err(_) => {
+                        vec![]
+                    }
+                }
+            }
+            Err(_) => {
+                return;
+            }
+        };
+
+        updated_items.sort_unstable();
+        // If updated_items is not euqal to last_updates, it means the upstream has
+        // refreshed the updates.
+        if updated_items != self.last_updates {
+            let items = self.fetch_items(updated_items.clone());
+            match self.store.update_items(items) {
+                Ok(()) => {}
+                Err(e) => {
+                    println!("update items err: {:?}", e);
+                }
+            }
+            self.last_updates = updated_items;
+        }
+    }
+
     pub fn run(&mut self) {
         loop {
             match self.closer.recv_timeout(Duration::from_secs(1)) {
@@ -172,6 +213,13 @@ impl Crawler {
             if close {
                 return;
             }
+            self.grab_rencent_updates();
         }
     }
+}
+
+#[derive(Serialize, Deserialize)]
+struct Updates {
+    items: Vec<u32>,
+    profiles: Vec<String>,
 }

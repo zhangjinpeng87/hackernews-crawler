@@ -61,6 +61,45 @@ impl Store {
             })
         )
     }
+
+    pub fn update_items(&mut self, items: Vec<Item>) -> Result<()> {
+        if items.is_empty() {
+            return Ok(());
+        }
+
+        let mut conn = self.pool.get_conn().unwrap();
+        conn.exec_batch(
+                r"INSERT INTO items (id, deleted, type, who, time, dead, kids, title, content, score, url, parent)
+                VALUES (:id, :deleted, :type, :who, :time, :dead, :kids, :title, :content, :score, :url, :parent)
+                ON DUPLICATE KEY UPDATE deleted = :deleted2, type = :type2, who = :who2, time = :time2, dead = :dead2, 
+                kids = :kids2, title = :title2, content = :content2, score = :score2, url = :url2, parent = :parent2", 
+            items.iter().map(|item| params !{
+                "id" => item.id,
+                "deleted" => item.deleted,
+                "type" => item.tp.clone(),
+                "who" => item.who.clone(),
+                "time" => item.time,
+                "dead" => item.dead,
+                "kids" => format!("{:?}", item.kids),
+                "title" => item.title.clone(),
+                "content" => item.text.clone(),
+                "score" => item.score,
+                "url" => item.url.clone(),
+                "parent" => item.parent,
+                "deleted2" => item.deleted,
+                "type2" => item.tp.clone(),
+                "who2" => item.who.clone(),
+                "time2" => item.time,
+                "dead2" => item.dead,
+                "kids2" => format!("{:?}", item.kids),
+                "title2" => item.title.clone(),
+                "content2" => item.text.clone(),
+                "score2" => item.score,
+                "url2" => item.url.clone(),
+                "parent2" => item.parent,
+            })
+        )
+    }
 }
 
 #[derive(Serialize, Deserialize)]
