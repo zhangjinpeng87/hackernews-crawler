@@ -14,11 +14,9 @@ crawler <db-host> <db-port> <db-name> <db-user> <db-pwd> <hackernews-hub>
 ```
 crawler tidb-cloud-connection-addr 4000 https://hacker-news.firebaseio.com/v0
 ```
-For me, I use TiDB Cloud dev-tier as database to store data.
+For me, I used TiDB Cloud dev-tier as a database to store the data and wrote some SQL and then used retool to display the query results.
 
 ![aee3c3b4-228b-456f-9e9d-519af640fd46](https://user-images.githubusercontent.com/19700528/176884255-8118191e-c395-4fee-97f6-3559f70d48ec.jpeg)
-
-I wrote some SQLs and output the result in retool.
 
 Latest 500 new stories:
 ```
