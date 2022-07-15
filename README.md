@@ -1,6 +1,6 @@
 # Hackernews Crawler
 
-This is a hackernews crawler which grab the latest stories and comments, store them to a MySQL compatibale database like MySQL or [TiDB Cloud](https://tidbcloud.com/).
+This is a hackernews crawler used to grab the latest stories and comments, store them to a MySQL compatibale database like MySQL or [TiDB Cloud](https://tidbcloud.com/).
 
 ## Build
 ```
